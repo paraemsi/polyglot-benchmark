@@ -6,36 +6,56 @@ if(DEFINED _CPPT_HOOK_LOADED)
 endif()
 set(_CPPT_HOOK_LOADED TRUE)
 
-# Ensure compile_commands.json is emitted exactly once (top level picks it up)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# ------------- user customisation via env vars ------------------------------
+set(CPPTEST_CONFIG $ENV{CPPTEST_CONFIG})
+if(NOT CPPTEST_CONFIG)
+    set(CPPTEST_CONFIG "builtin://Recommended Rules")
+endif()
 
-# Find Parasoft
+set(BUILD_ID $ENV{BUILD_ID})
+
+# ------------- locate Parasoft ---------------------------------------------
 set(CPPTEST_HOME $ENV{CPPTEST_HOME})
 if(NOT EXISTS "${CPPTEST_HOME}/cpptestcli")
-    message(FATAL_ERROR "cpptestcli not found; export CPPTEST_HOME first")
+    message(FATAL_ERROR "cpptestcli not found; export CPPTEST_HOME")
 endif()
 set(_CPPTCLI "${CPPTEST_HOME}/cpptestcli")
 
-# Attach a POST_BUILD analysis step to one executable
+# always emit compile_commands.json once
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ------------- helper that hooks ONE executable ----------------------------
 function(_cpptest_attach TARGET_NAME)
-    # Avoid re-attaching if run twice in the same directory
     if(_cpptest_attached_${TARGET_NAME})
-        return()
+        return()                       # idempotent
     endif()
     set(_cpptest_attached_${TARGET_NAME} TRUE PARENT_SCOPE)
 
+    # base dir for reports
+    set(_REPORT_DIR "${CMAKE_BINARY_DIR}/cpptest_reports")
+    if(BUILD_ID)
+        set(_REPORT_DIR "${_REPORT_DIR}/${BUILD_ID}")
+    endif()
+
+    # assemble cli argument list
+    set(_ARGS
+        "-input"      "${CMAKE_BINARY_DIR}/compile_commands.json"
+        "-module"     "${TARGET_NAME}"
+        "-config"     "${CPPTEST_CONFIG}"
+        "-report"     "${_REPORT_DIR}/${TARGET_NAME}"
+        "-workspace"  "${CMAKE_BINARY_DIR}/cpptest_ws"
+    )
+    if(BUILD_ID)
+        list(APPEND _ARGS -property "build.id=${BUILD_ID}")
+    endif()
+
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-        COMMAND "${_CPPTCLI}"
-                -input  "${CMAKE_BINARY_DIR}/compile_commands.json"
-                -module "${TARGET_NAME}"
-                -config "builtin://Recommended Rules"
-                -report "${CMAKE_BINARY_DIR}/cpptest_reports/${TARGET_NAME}"
-                -workspace "${CMAKE_BINARY_DIR}/cpptest_ws"
+        COMMAND "${_CPPTCLI}" ${_ARGS}
         COMMENT "Parasoft C/C++test → ${TARGET_NAME}"
         VERBATIM)
 endfunction()
 
-# Loop over **local** targets; hook every executable except those that start with 'test_'
+# ------------- attach to every non-test executable in this dir -------------
 get_property(_tgt_list DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(t IN LISTS _tgt_list)
     get_target_property(_kind ${t} TYPE)
