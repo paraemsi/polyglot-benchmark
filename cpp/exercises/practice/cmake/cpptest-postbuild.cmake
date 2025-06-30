@@ -21,9 +21,6 @@ if(NOT EXISTS "${CPPTEST_HOME}/cpptestcli")
 endif()
 set(_CPPTCLI "${CPPTEST_HOME}/cpptestcli")
 
-# always emit compile_commands.json once
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # ------------- helper that hooks ONE executable ----------------------------
 function(_cpptest_attach TARGET_NAME)
     if(_cpptest_attached_${TARGET_NAME})
@@ -40,17 +37,19 @@ function(_cpptest_attach TARGET_NAME)
     # assemble cli argument list
     set(_ARGS
         "-input"      "${CMAKE_BINARY_DIR}/compile_commands.json"
-        "-module"     "${TARGET_NAME}"
+        "-module"     .
         "-config"     "${CPPTEST_CONFIG}"
         "-report"     "${_REPORT_DIR}/${TARGET_NAME}"
         "-workspace"  "${CMAKE_BINARY_DIR}/cpptest_ws"
+        "-exclude" "*_test.cpp"  "-exclude" "*/test/*"
+        "-property" "session.tag=${TARGET_NAME}"
     )
     if(BUILD_ID)
         list(APPEND _ARGS -property "build.id=${BUILD_ID}")
     endif()
 
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-        COMMAND "${_CPPTCLI}" ${_ARGS}
+        COMMAND "${_CPPTCLI}" -compiler gcc_11-64 -property dtp.project=ML ${_ARGS}
         COMMENT "Parasoft C/C++test → ${TARGET_NAME}"
         VERBATIM)
 endfunction()
