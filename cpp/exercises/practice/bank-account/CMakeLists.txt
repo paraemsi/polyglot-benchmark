@@ -69,3 +69,4 @@ endif()
 
 # Run the tests on every build
 add_custom_target(test_${exercise} ALL DEPENDS ${exercise} COMMAND ${exercise})
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/cpptest-postbuild.cmake")
