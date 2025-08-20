@@ -30,16 +30,13 @@ function(_cpptest_attach TARGET_NAME)
 
     # base dir for reports
     set(_REPORT_DIR "${CMAKE_BINARY_DIR}/cpptest_reports")
-    if(BUILD_ID)
-        set(_REPORT_DIR "${_REPORT_DIR}/${BUILD_ID}")
-    endif()
 
     # assemble cli argument list
     set(_ARGS
         "-input"      "${CMAKE_BINARY_DIR}/compile_commands.json"
         "-module"     .
         "-config"     "${CPPTEST_CONFIG}"
-        "-report"     "${_REPORT_DIR}/${TARGET_NAME}"
+        "-report"     "${_REPORT_DIR}"
         "-workspace"  "${CMAKE_BINARY_DIR}/cpptest_ws"
         "-exclude" "*_test.cpp"  "-exclude" "*/test/*"
         "-property" "session.tag=${TARGET_NAME}"
