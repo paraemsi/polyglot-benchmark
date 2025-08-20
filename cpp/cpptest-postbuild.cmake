@@ -46,7 +46,8 @@ function(_cpptest_attach TARGET_NAME)
     endif()
 
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-        COMMAND "${_CPPTCLI}" -compiler gcc_11-64 -property dtp.project=ML ${_ARGS}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_REPORT_DIR}"
+        COMMAND "${_CPPTCLI}" -compiler gcc_11-64 -property dtp.project=ML ${_ARGS} > "${_REPORT_DIR}/cpptestcli.log" 2>&1
         COMMENT "Parasoft C/C++test → ${TARGET_NAME}"
         VERBATIM)
 endfunction()
